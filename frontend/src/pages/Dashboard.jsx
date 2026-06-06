@@ -3,26 +3,27 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Card, { CardBody } from "../components/ui/Card";
 import Button from "../components/ui/Button";
-import { getSummaryReport } from "../api/report.api";
+import { getSummaryReport, getMonthlySpendingReport } from "../api/report.api";
+import { getPurchaseOrders } from "../api/purchaseOrder.api";
 import { ROLES } from "../utils/constants";
 import {
-  LayoutDashboard,
   Users,
   ClipboardList,
-  CheckCircle,
   IndianRupee,
-  FileText,
   Clock,
   ArrowRight,
   TrendingUp,
-  Receipt,
   AlertCircle,
+  FileText,
+  CheckCircle,
 } from "lucide-react";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [recentPOs, setRecentPOs] = useState([]);
+  const [spendingTrend, setSpendingTrend] = useState([]);
   const [summary, setSummary] = useState({
     totalVendors: 0,
     totalRFQs: 0,
@@ -30,6 +31,7 @@ export default function Dashboard() {
     rejectedRFQs: 0,
     totalPOs: 0,
     totalInvoices: 0,
+    overdueInvoices: 0,
     pendingApprovals: 0,
     totalSpending: 0,
     topVendors: [],
@@ -40,13 +42,23 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isVendor) {
       setLoading(true);
-      getSummaryReport()
-        .then((res) => {
-          if (res.data?.success) {
-            setSummary(res.data.data);
+      Promise.all([
+        getSummaryReport(),
+        getPurchaseOrders({ take: 5 }),
+        getMonthlySpendingReport(),
+      ])
+        .then(([resSummary, resPOs, resSpending]) => {
+          if (resSummary.data?.success) {
+            setSummary(resSummary.data.data);
+          }
+          if (resPOs.data?.success) {
+            setRecentPOs(resPOs.data.data.slice(0, 5));
+          }
+          if (resSpending.data?.success) {
+            setSpendingTrend(resSpending.data.data || []);
           }
         })
-        .catch((err) => console.error("Error loading dashboard summary:", err))
+        .catch((err) => console.error("Error loading dashboard data:", err))
         .finally(() => setLoading(false));
     }
   }, [isVendor]);
@@ -59,6 +71,10 @@ export default function Dashboard() {
       maximumFractionDigits: 0,
     }).format(val);
   };
+
+  const maxSpendingVal = spendingTrend.length > 0
+    ? Math.max(...spendingTrend.map((s) => s.spending))
+    : 100000;
 
   return (
     <div className="space-y-8 animate-slide-up">
@@ -118,7 +134,7 @@ export default function Dashboard() {
                 <ClipboardList className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total RFQs</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Active RFQs</p>
                 <p className="text-xl font-bold text-gray-900 mt-0.5">
                   {loading ? "..." : summary.totalRFQs}
                 </p>
@@ -128,13 +144,13 @@ export default function Dashboard() {
 
           <Card className="hover:shadow-md transition-shadow">
             <CardBody className="flex items-center gap-4">
-              <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl">
-                <Users className="w-6 h-6" />
+              <div className="p-3.5 bg-rose-50 text-rose-600 rounded-2xl">
+                <FileText className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Vendors</p>
-                <p className="text-xl font-bold text-gray-900 mt-0.5">
-                  {loading ? "..." : summary.totalVendors}
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Overdue Invoices</p>
+                <p className="text-xl font-bold text-gray-950 mt-0.5">
+                  {loading ? "..." : summary.overdueInvoices || 0}
                 </p>
               </div>
             </CardBody>
@@ -144,7 +160,7 @@ export default function Dashboard() {
 
       {/* Main layout splitting quick links and notifications/summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Columns: Role Actions */}
+        {/* Left 2 Columns: Actions, PO Table, Charts */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardBody className="p-6">
@@ -161,7 +177,7 @@ export default function Dashboard() {
                       <h4 className="font-semibold text-sm text-gray-800">Request Quotations</h4>
                       <p className="text-xs text-gray-400 mt-1">Draft a new Request for Quotation (RFQ) and invite vendors.</p>
                     </div>
-                    <Button onClick={() => navigate("/rfqs?action=create")} size="sm" className="w-fit gap-1">
+                    <Button onClick={() => navigate("/rfqs")} size="sm" className="w-fit gap-1">
                       New RFQ <ArrowRight className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -186,7 +202,7 @@ export default function Dashboard() {
                       <h4 className="font-semibold text-sm text-gray-800">Pending Approvals</h4>
                       <p className="text-xs text-gray-400 mt-1">Review quotation selections and authorize purchase orders.</p>
                     </div>
-                    <Button onClick={() => navigate("/approvals?status=PENDING")} size="sm" className="w-fit gap-1">
+                    <Button onClick={() => navigate("/approvals")} size="sm" className="w-fit gap-1">
                       Authorizations <ArrowRight className="w-3.5 h-3.5" />
                     </Button>
                   </div>
@@ -249,10 +265,81 @@ export default function Dashboard() {
               )}
             </CardBody>
           </Card>
+
+          {/* Recent Purchase Orders Table */}
+          {!isVendor && (
+            <Card>
+              <CardBody className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-base font-semibold text-gray-900">Recent Purchase Orders</h3>
+                  <Link to="/purchase-orders" className="text-xs text-primary-600 hover:underline flex items-center gap-1">
+                    View All <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+                {recentPOs.length === 0 ? (
+                  <p className="text-xs text-gray-400 py-6 text-center">No purchase orders generated yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-100 text-gray-400 font-semibold uppercase">
+                          <th className="py-2">PO#</th>
+                          <th className="py-2">Vendor</th>
+                          <th className="py-2">Amount</th>
+                          <th className="py-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50 text-gray-700">
+                        {recentPOs.map((po) => (
+                          <tr key={po.id} className="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => navigate(`/purchase-orders/${po.id}`)}>
+                            <td className="py-3 font-semibold text-primary-600">{po.poNumber}</td>
+                            <td className="py-3 font-medium">{po.vendor?.companyName}</td>
+                            <td className="py-3 font-bold">Rs. {po.totalAmount.toLocaleString()}</td>
+                            <td className="py-3">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-150">
+                                {po.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          )}
         </div>
 
-        {/* Right 1 Column: Top Suppliers or Alerts */}
+        {/* Right 1 Column: Top Rated Suppliers / Spend Trends CSS Chart */}
         <div className="space-y-6">
+          {!isVendor && spendingTrend.length > 0 && (
+            <Card>
+              <CardBody className="p-5">
+                <h3 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Spending Trend</h3>
+                <div className="flex items-end justify-between h-36 pt-4 border-b border-gray-100 gap-2">
+                  {spendingTrend.slice(-4).map((trend, idx) => {
+                    const percentage = (trend.spending / maxSpendingVal) * 100;
+                    return (
+                      <div key={idx} className="flex-1 flex flex-col items-center group relative">
+                        <span className="absolute -top-7 scale-0 group-hover:scale-100 transition-transform bg-gray-900 text-white text-[9px] px-1.5 py-0.5 rounded shadow font-semibold">
+                          Rs.{Math.round(trend.spending/1000)}k
+                        </span>
+                        <div
+                          style={{ height: `${Math.max(10, percentage)}%` }}
+                          className="w-full bg-primary-500 hover:bg-primary-600 rounded-t transition-all"
+                        />
+                        <span className="text-[9px] font-bold text-gray-400 mt-1.5 whitespace-nowrap">
+                          {trend.month.split(" ")[0]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
           {!isVendor ? (
             <Card>
               <CardBody className="p-5">

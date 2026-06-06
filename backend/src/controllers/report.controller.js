@@ -5,6 +5,7 @@ const ApiResponse = require("../utils/ApiResponse");
 const getSummary = async (req, res, next) => {
   try {
     const totalVendors = await prisma.vendor.count();
+    const activeVendors = await prisma.vendor.count({ where: { status: "ACTIVE" } });
     const totalRFQs = await prisma.rFQ.count();
     
     const approvedRFQs = await prisma.rFQ.count({
@@ -16,7 +17,9 @@ const getSummary = async (req, res, next) => {
     });
 
     const totalPOs = await prisma.purchaseOrder.count();
+    const completedPOs = await prisma.purchaseOrder.count({ where: { status: "COMPLETED" } });
     const totalInvoices = await prisma.invoice.count();
+    const overdueInvoices = await prisma.invoice.count({ where: { status: "OVERDUE" } });
     const pendingApprovals = await prisma.approval.count({
       where: { status: "PENDING" },
     });
@@ -35,17 +38,70 @@ const getSummary = async (req, res, next) => {
       orderBy: { rating: "desc" },
     });
 
+    // Fetch spend by category
+    const spendByCategoryRaw = await prisma.purchaseOrder.findMany({
+      select: {
+        totalAmount: true,
+        rfq: {
+          select: { category: true }
+        }
+      }
+    });
+
+    const categorySpendMap = {};
+    spendByCategoryRaw.forEach((po) => {
+      const cat = po.rfq?.category || "Other";
+      if (!categorySpendMap[cat]) {
+        categorySpendMap[cat] = 0;
+      }
+      categorySpendMap[cat] += po.totalAmount;
+    });
+
+    const spendByCategory = Object.keys(categorySpendMap).map((key) => ({
+      category: key,
+      amount: categorySpendMap[key],
+    }));
+
+    // Fetch spend by vendor
+    const spendByVendorRaw = await prisma.purchaseOrder.findMany({
+      select: {
+        totalAmount: true,
+        vendor: {
+          select: { companyName: true }
+        }
+      }
+    });
+
+    const vendorSpendMap = {};
+    spendByVendorRaw.forEach((po) => {
+      const name = po.vendor?.companyName || "Unknown";
+      if (!vendorSpendMap[name]) {
+        vendorSpendMap[name] = 0;
+      }
+      vendorSpendMap[name] += po.totalAmount;
+    });
+
+    const spendByVendor = Object.keys(vendorSpendMap).map((key) => ({
+      vendorName: key,
+      amount: vendorSpendMap[key],
+    })).sort((a, b) => b.amount - a.amount).slice(0, 5);
+
     res.status(200).json(
       new ApiResponse(200, "Summary reports fetched successfully.", {
         totalVendors,
+        activeVendors,
         totalRFQs,
         approvedRFQs,
         rejectedRFQs,
         totalPOs,
+        completedPOs,
         totalInvoices,
+        overdueInvoices,
         pendingApprovals,
         totalSpending,
         topVendors,
+        spendByCategory,
+        spendByVendor
       })
     );
   } catch (error) {

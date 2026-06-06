@@ -97,6 +97,7 @@ export default function RFQDetails() {
         deliveryTimeline: data.deliveryTimeline,
         notes: data.notes,
         attachmentUrl: data.attachmentUrl || null,
+        paymentTerms: Number(data.paymentTerms),
       });
 
       if (res.data?.success) {
@@ -211,16 +212,25 @@ export default function RFQDetails() {
               </div>
 
               {rfq.attachmentUrl && (
-                <div>
-                  <span className="text-[10px] text-gray-400 uppercase font-semibold block">Attachment Reference</span>
-                  <a
-                    href={rfq.attachmentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-primary-600 hover:underline font-semibold flex items-center gap-1 mt-1 break-all"
-                  >
-                    View Attachment Spec
-                  </a>
+                <div className="p-3 bg-slate-50 border border-gray-150 rounded-xl space-y-2">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold block">Attachment Specifications</span>
+                  <div className="flex gap-2">
+                    <a
+                      href={rfq.attachmentUrl.startsWith("http") ? rfq.attachmentUrl : `http://localhost:5000${rfq.attachmentUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex-1 py-1.5 px-3 bg-white border border-gray-200 text-center rounded-lg text-[11px] font-semibold hover:bg-gray-50 text-gray-700 block transition-colors"
+                    >
+                      Preview Spec
+                    </a>
+                    <a
+                      href={rfq.attachmentUrl.startsWith("http") ? rfq.attachmentUrl : `http://localhost:5000${rfq.attachmentUrl}`}
+                      download
+                      className="flex-1 py-1.5 px-3 bg-primary-600 text-center rounded-lg text-[11px] font-semibold text-white hover:bg-primary-700 block transition-colors"
+                    >
+                      Download
+                    </a>
+                  </div>
                 </div>
               )}
 
@@ -327,11 +337,18 @@ export default function RFQDetails() {
             <Card>
               <CardBody className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold text-sm text-gray-900 uppercase tracking-wider">Quotation bids</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-bold text-sm text-gray-900 uppercase tracking-wider">Quotation bids</h3>
+                    {rfq.quotations?.length > 1 && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
+                        <TrendingUp className="w-3.5 h-3.5" /> Best Bid analysis enabled
+                      </span>
+                    )}
+                  </div>
                   {rfq.quotations?.length > 1 && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1">
-                      <TrendingDown className="w-3.5 h-3.5" /> Best Bid analysis enabled
-                    </span>
+                    <Button onClick={() => navigate(`/rfqs/${rfq.id}/compare`)} size="xs" variant="outline" className="gap-1">
+                      Compare Bids <ChevronRight className="w-3.5 h-3.5" />
+                    </Button>
                   )}
                 </div>
 
@@ -341,7 +358,7 @@ export default function RFQDetails() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <Table headers={["Supplier", "Unit Price", "Tax %", "Total Bid", "Timeline", "Status", "Actions"]}>
+                    <Table headers={["Supplier", "Unit Price", "Tax %", "Total Bid", "Timeline", "Payment Terms", "Status", "Actions"]}>
                       {rfq.quotations.map((quote) => {
                         const isLowest = lowestQuotation && quote.id === lowestQuotation.id;
                         const isApproved = quote.status === "APPROVED";
@@ -366,13 +383,14 @@ export default function RFQDetails() {
                             <td className="px-6 py-4 text-xs text-gray-400 font-mono">{quote.taxPercentage}%</td>
                             <td className="px-6 py-4 font-bold text-primary-600">Rs. {quote.totalAmount.toLocaleString()}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">{quote.deliveryTimeline}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold text-gray-700">{quote.paymentTerms ? `Net ${quote.paymentTerms} days` : "Immediate"}</td>
                             <td className="px-6 py-4">
                               <span
                                 className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
                                   STATUS_COLORS[quote.status] || "bg-gray-100 text-gray-800"
                                 }`}
                               >
-                                {quote.status}
+                                  {quote.status}
                               </span>
                             </td>
                             <td className="px-6 py-4">
@@ -450,12 +468,21 @@ export default function RFQDetails() {
             <span className="text-primary-600 text-sm font-bold">Rs. {estimatedTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
 
-          <Input
-            label="Delivery Timeline"
-            placeholder="e.g. 5 business days after PO"
-            error={errorsQuote.deliveryTimeline?.message}
-            {...registerQuote("deliveryTimeline", { required: "Delivery timeline is required" })}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Delivery Timeline"
+              placeholder="e.g. 5 business days after PO"
+              error={errorsQuote.deliveryTimeline?.message}
+              {...registerQuote("deliveryTimeline", { required: "Delivery timeline is required" })}
+            />
+            <Input
+              label="Payment Terms (Days)"
+              type="number"
+              placeholder="e.g. 30"
+              error={errorsQuote.paymentTerms?.message}
+              {...registerQuote("paymentTerms", { required: "Payment terms are required", valueAsNumber: true })}
+            />
+          </div>
 
           <Textarea
             label="Additional Notes / Remarks (Optional)"

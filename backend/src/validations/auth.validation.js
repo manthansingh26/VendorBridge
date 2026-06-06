@@ -6,6 +6,14 @@ const registerSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(50, "Name must be at most 50 characters")
     .trim(),
+  firstName: z
+    .string()
+    .optional()
+    .or(z.literal("")),
+  lastName: z
+    .string()
+    .optional()
+    .or(z.literal("")),
   email: z
     .string({ required_error: "Email is required" })
     .email("Invalid email address")
@@ -24,6 +32,18 @@ const registerSchema = z.object({
     .max(15, "Phone must be at most 15 digits")
     .optional()
     .or(z.literal("")),
+  role: z
+    .string()
+    .optional()
+    .or(z.literal("")),
+  country: z
+    .string()
+    .optional()
+    .or(z.literal("")),
+  professionalInfo: z
+    .string()
+    .optional()
+    .or(z.literal("")),
   password: z
     .string({ required_error: "Password is required" })
     .min(6, "Password must be at least 6 characters")
@@ -31,9 +51,9 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z
-    .string({ required_error: "Email is required" })
-    .email("Invalid email address")
+  usernameOrEmail: z
+    .string({ required_error: "Username or Email is required" })
+    .min(1, "Username or Email is required")
     .trim()
     .toLowerCase(),
   password: z

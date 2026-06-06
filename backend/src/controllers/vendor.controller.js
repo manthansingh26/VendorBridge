@@ -47,7 +47,11 @@ const getVendors = async (req, res, next) => {
     }
 
     if (status) {
-      where.status = status;
+      if (status === "BLOCKED") {
+        where.status = { in: ["INACTIVE", "BLACKLISTED"] };
+      } else {
+        where.status = status;
+      }
     }
 
     if (search) {

@@ -32,23 +32,38 @@ const register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(validated.password, salt);
 
+    // Validate role
+    let selectedRole = "PROCUREMENT_OFFICER";
+    if (validated.role && ["ADMIN", "PROCUREMENT_OFFICER", "VENDOR", "MANAGER"].includes(validated.role)) {
+      selectedRole = validated.role;
+    }
+
     // Create user
     const user = await prisma.user.create({
       data: {
         name: validated.name,
+        firstName: validated.firstName || null,
+        lastName: validated.lastName || null,
         email: validated.email,
         username: validated.username,
         phone: validated.phone || null,
+        role: selectedRole,
+        country: validated.country || null,
+        professionalInfo: validated.professionalInfo || null,
         password: hashedPassword,
       },
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
         email: true,
         username: true,
         phone: true,
         avatar: true,
         role: true,
+        country: true,
+        professionalInfo: true,
         createdAt: true,
       },
     });
@@ -70,19 +85,24 @@ const login = async (req, res, next) => {
     const validated = loginSchema.parse(req.body);
 
     // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: validated.email },
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: validated.usernameOrEmail },
+          { username: validated.usernameOrEmail },
+        ],
+      },
     });
 
     if (!user) {
-      throw new ApiError(401, "Invalid email or password.");
+      throw new ApiError(401, "Invalid username/email or password.");
     }
 
     // Compare password
     const isMatch = await bcrypt.compare(validated.password, user.password);
 
     if (!isMatch) {
-      throw new ApiError(401, "Invalid email or password.");
+      throw new ApiError(401, "Invalid username/email or password.");
     }
 
     // Generate JWT

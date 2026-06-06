@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { getRFQs, createRFQ, updateRFQ, deleteRFQ, assignVendors } from "../../api/rfq.api";
 import { getVendors } from "../../api/vendor.api";
+import { uploadFile } from "../../api/user.api";
 import { useAuth } from "../../context/AuthContext";
 import { ROLES, STATUS_COLORS } from "../../utils/constants";
 import Table from "../../components/ui/Table";
@@ -32,7 +33,16 @@ export default function RFQList() {
   const [allVendors, setAllVendors] = useState([]);
   const [selectedVendors, setSelectedVendors] = useState([]);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+  // Stepper states
+  const [step, setStep] = useState(1);
+  const [step1Data, setStep1Data] = useState(null);
+  const [matchingVendors, setMatchingVendors] = useState([]);
+  const [assignedVendorIds, setAssignedVendorIds] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm();
+  
+  const watchAttachmentUrl = watch("attachmentUrl");
 
   const isOfficer = user?.role === ROLES.PROCUREMENT_OFFICER || user?.role === ROLES.ADMIN;
 
@@ -63,23 +73,76 @@ export default function RFQList() {
     const searchParams = new URLSearchParams(location.search);
     if (searchParams.get("action") === "create" && isOfficer) {
       reset();
+      setStep(1);
+      setStep1Data(null);
+      setAssignedVendorIds([]);
       setIsCreateOpen(true);
       navigate("/rfqs", { replace: true });
     }
   }, [location.search]);
 
-  // Submit RFQ form
-  const onSubmitRFQ = async (data) => {
+  // File Upload Helper
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await uploadFile(formData);
+        if (res.data?.success) {
+          setValue("attachmentUrl", res.data.fileUrl);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("File upload failed.");
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
+
+  // Step 1: Specifications Submitted, load vendors
+  const onNextStep = async (data) => {
+    setStep1Data(data);
     try {
-      const res = await createRFQ(data);
+      const res = await getVendors({ category: data.category, status: "ACTIVE" });
       if (res.data?.success) {
+        setMatchingVendors(res.data.data);
+      }
+      setStep(2);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Step 2: Finalize Draft or Publish
+  const handleCreateRFQFinal = async (shouldPublish) => {
+    try {
+      // Create RFQ first
+      const res = await createRFQ(step1Data);
+      if (res.data?.success) {
+        const newRFQ = res.data.data;
+        // If publish and vendors selected, assign them which updates status to SENT
+        if (shouldPublish && assignedVendorIds.length > 0) {
+          await assignVendors(newRFQ.id, { vendorIds: assignedVendorIds });
+        }
         setIsCreateOpen(false);
+        setStep(1);
+        setStep1Data(null);
+        setAssignedVendorIds([]);
         fetchRFQsList();
       }
     } catch (err) {
-      console.error("Create RFQ error:", err);
+      console.error(err);
       alert(err.response?.data?.message || "Failed to create RFQ.");
     }
+  };
+
+  const handleToggleVendorSelectInStepper = (vendorId) => {
+    setAssignedVendorIds((prev) =>
+      prev.includes(vendorId) ? prev.filter((id) => id !== vendorId) : [...prev, vendorId]
+    );
   };
 
   // Open assign vendor modal
@@ -275,80 +338,163 @@ export default function RFQList() {
 
       {/* Creation Modal */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Request for Quotation (RFQ)" maxWidth="max-w-xl">
-        <form onSubmit={handleSubmit(onSubmitRFQ)} className="space-y-4">
-          <Input
-            label="RFQ Title"
-            placeholder="e.g. Procurement of Office Laptops Q3"
-            error={errors.title?.message}
-            {...register("title", { required: "RFQ Title is required" })}
-          />
-
-          <Textarea
-            label="RFQ Description"
-            placeholder="Describe technical specifications, deliverables, warranties, etc."
-            error={errors.description?.message}
-            {...register("description", { required: "RFQ Description is required" })}
-          />
-
-          <Input
-            label="Attachment URL (Specifications/Drawings)"
-            placeholder="e.g. https://example.com/specs.pdf"
-            error={errors.attachmentUrl?.message}
-            {...register("attachmentUrl")}
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Item Name"
-              placeholder="e.g. Lenovo ThinkPad L14"
-              error={errors.itemName?.message}
-              {...register("itemName", { required: "Item Name is required" })}
-            />
-            <Select
-              label="Category"
-              options={[
-                { value: "IT Hardware", label: "IT Hardware" },
-                { value: "Software License", label: "Software License" },
-                { value: "Office Stationery", label: "Office Stationery" },
-                { value: "Raw Materials", label: "Raw Materials" },
-                { value: "Services", label: "Services" },
-              ]}
-              error={errors.category?.message}
-              {...register("category", { required: "Category is required" })}
-            />
+        {/* Stepper Header */}
+        <div className="flex items-center justify-between mb-6 border-b border-gray-150 pb-4">
+          <div className="flex items-center gap-2">
+            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+              step === 1 ? "bg-primary-600 text-white shadow-sm" : "bg-emerald-100 text-emerald-700"
+            }`}>
+              {step > 1 ? "✓" : "1"}
+            </span>
+            <span className={`text-xs font-semibold ${step === 1 ? "text-gray-900 font-bold" : "text-emerald-700"}`}>RFQ Details</span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              label="Quantity"
-              type="number"
-              placeholder="10"
-              error={errors.quantity?.message}
-              {...register("quantity", { required: "Quantity required", valueAsNumber: true })}
-            />
-            <Input
-              label="Unit (e.g. Pcs, Kgs)"
-              placeholder="Pcs"
-              error={errors.unit?.message}
-              {...register("unit", { required: "Unit is required" })}
-            />
-            <Input
-              label="Submission Deadline"
-              type="date"
-              error={errors.deadline?.message}
-              {...register("deadline", { required: "Deadline is required" })}
-            />
+          <div className="flex-1 h-0.5 bg-gray-100 mx-4" />
+          <div className="flex items-center gap-2">
+            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+              step === 2 ? "bg-primary-600 text-white shadow-sm" : "bg-gray-100 text-gray-400"
+            }`}>
+              2
+            </span>
+            <span className={`text-xs font-semibold ${step === 2 ? "text-gray-900 font-bold" : "text-gray-400"}`}>Assign Vendors</span>
           </div>
+        </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-            <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              Save as Draft
-            </Button>
+        {step === 1 ? (
+          <form onSubmit={handleSubmit(onNextStep)} className="space-y-4">
+            <Input
+              label="RFQ Title"
+              placeholder="e.g. Procurement of Office Laptops Q3"
+              error={errors.title?.message}
+              {...register("title", { required: "RFQ Title is required" })}
+            />
+
+            <Textarea
+              label="RFQ Description"
+              placeholder="Describe technical specifications, deliverables, warranties, etc."
+              error={errors.description?.message}
+              {...register("description", { required: "RFQ Description is required" })}
+            />
+
+            <div className="p-4 bg-slate-50/50 border border-gray-100 rounded-xl space-y-3">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                Attachment / Specifications Document
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
+                />
+                {uploading && <span className="text-xs text-gray-400">Uploading...</span>}
+              </div>
+              {watchAttachmentUrl && (
+                <p className="text-[10px] text-emerald-600 font-semibold mt-1">✓ Uploaded: {watchAttachmentUrl}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Item Name"
+                placeholder="e.g. Lenovo ThinkPad L14"
+                error={errors.itemName?.message}
+                {...register("itemName", { required: "Item Name is required" })}
+              />
+              <Select
+                label="Category"
+                options={[
+                  { value: "IT Hardware", label: "IT Hardware" },
+                  { value: "Software License", label: "Software License" },
+                  { value: "Office Stationery", label: "Office Stationery" },
+                  { value: "Raw Materials", label: "Raw Materials" },
+                  { value: "Services", label: "Services" },
+                ]}
+                error={errors.category?.message}
+                {...register("category", { required: "Category is required" })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Input
+                label="Quantity"
+                type="number"
+                placeholder="10"
+                error={errors.quantity?.message}
+                {...register("quantity", { required: "Quantity required", valueAsNumber: true })}
+              />
+              <Input
+                label="Unit (e.g. Pcs, Kgs)"
+                placeholder="Pcs"
+                error={errors.unit?.message}
+                {...register("unit", { required: "Unit is required" })}
+              />
+              <Input
+                label="Submission Deadline"
+                type="date"
+                error={errors.deadline?.message}
+                {...register("deadline", { required: "Deadline is required" })}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+              <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Next: Assign Vendors
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-slate-50 p-4 rounded-xl border border-gray-100 mb-2">
+              <h4 className="font-semibold text-sm text-gray-800">{step1Data?.title}</h4>
+              <p className="text-xs text-gray-400 mt-1">
+                Category: <span className="text-gray-600 font-medium">{step1Data?.category}</span>
+              </p>
+            </div>
+
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+              Select matching suppliers to invite ({matchingVendors.length} available)
+            </p>
+
+            {matchingVendors.length === 0 ? (
+              <p className="text-xs text-gray-400 py-6 text-center bg-gray-50 border border-dashed rounded-xl">
+                No active suppliers found in this category. You can still save it as a draft.
+              </p>
+            ) : (
+              <div className="max-h-60 overflow-y-auto border border-gray-100 rounded-xl divide-y divide-gray-50 bg-white">
+                {matchingVendors.map((vendor) => (
+                  <label key={vendor.id} className="flex items-center gap-3 p-3 hover:bg-gray-50/50 cursor-pointer text-xs transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={assignedVendorIds.includes(vendor.id)}
+                      onChange={() => handleToggleVendorSelectInStepper(vendor.id)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500 w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-800">{vendor.companyName}</p>
+                      <p className="text-gray-400 mt-0.5">Rating: ★ {vendor.rating.toFixed(1)} | {vendor.city}, {vendor.state}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+              <Button type="button" variant="outline" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" onClick={() => handleCreateRFQFinal(false)}>
+                  Save as Draft
+                </Button>
+                <Button type="button" onClick={() => handleCreateRFQFinal(true)} disabled={assignedVendorIds.length === 0}>
+                  Save & Send to Vendors
+                </Button>
+              </div>
+            </div>
           </div>
-        </form>
+        )}
       </Modal>
 
       {/* Vendor Assignment Modal */}

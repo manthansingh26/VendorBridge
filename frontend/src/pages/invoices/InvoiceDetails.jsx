@@ -248,9 +248,17 @@ export default function InvoiceDetails() {
                       Rs. {(invoice.totalAmount - invoice.taxAmount).toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between text-gray-500">
-                    <span>Tax (GST) Amount:</span>
-                    <span className="font-semibold text-gray-800">Rs. {invoice.taxAmount.toLocaleString()}</span>
+                  <div className="flex justify-between text-gray-400 pl-3 border-l border-gray-200">
+                    <span>CGST (5%):</span>
+                    <span className="font-mono text-gray-700">Rs. {(invoice.taxAmount / 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-400 pl-3 border-l border-gray-200">
+                    <span>SGST (5%):</span>
+                    <span className="font-mono text-gray-700">Rs. {(invoice.taxAmount / 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-500 font-semibold">
+                    <span>Total GST Amount:</span>
+                    <span className="text-gray-800 font-mono">Rs. {invoice.taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
                   <hr className="border-gray-100" />
                   <div className="flex justify-between text-sm font-bold text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-150">

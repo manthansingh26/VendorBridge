@@ -16,6 +16,7 @@ export default function VendorList() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function VendorList() {
       const params = {};
       if (searchTerm) params.search = searchTerm;
       if (categoryFilter) params.category = categoryFilter;
+      if (statusFilter && statusFilter !== "ALL") params.status = statusFilter;
 
       const res = await getVendors(params);
       if (res.data?.success) {
@@ -47,7 +49,7 @@ export default function VendorList() {
 
   useEffect(() => {
     fetchVendorsList();
-  }, [searchTerm, categoryFilter]);
+  }, [searchTerm, categoryFilter, statusFilter]);
 
   // Handle auto open modal from query params
   useEffect(() => {
@@ -132,6 +134,28 @@ export default function VendorList() {
         >
           <Plus className="w-4 h-4" /> Onboard Vendor
         </Button>
+      </div>
+
+      {/* Status Tab Filters */}
+      <div className="flex border-b border-gray-200 gap-6">
+        {[
+          { key: "ALL", label: "All Suppliers" },
+          { key: "ACTIVE", label: "Active" },
+          { key: "PENDING", label: "Pending Verification" },
+          { key: "BLOCKED", label: "Blocked" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusFilter(tab.key)}
+            className={`pb-3 text-sm font-semibold transition-colors relative ${
+              statusFilter === tab.key
+                ? "text-primary-600 border-b-2 border-primary-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Filters Bar */}

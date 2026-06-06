@@ -25,6 +25,7 @@ import VendorList from "../pages/vendors/VendorList";
 import VendorDetails from "../pages/vendors/VendorDetails";
 import RFQList from "../pages/rfqs/RFQList";
 import RFQDetails from "../pages/rfqs/RFQDetails";
+import QuotationCompare from "../pages/rfqs/QuotationCompare";
 import QuotationList from "../pages/quotations/QuotationList";
 import ApprovalList from "../pages/approvals/ApprovalList";
 import POList from "../pages/purchase-orders/POList";
@@ -91,6 +92,7 @@ export default function AppRoutes() {
         {/* RFQs */}
         <Route path="/rfqs" element={<RFQList />} />
         <Route path="/rfqs/:id" element={<RFQDetails />} />
+        <Route path="/rfqs/:id/compare" element={<QuotationCompare />} />
 
         {/* Quotations */}
         <Route path="/quotations" element={<QuotationList />} />

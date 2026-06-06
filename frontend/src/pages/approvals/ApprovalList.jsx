@@ -20,6 +20,10 @@ export default function ApprovalList() {
   const [actionType, setActionType] = useState(""); // "approve" or "reject"
   const [isDecisionOpen, setIsDecisionOpen] = useState(false);
 
+  // Detail Modal States
+  const [selectedDetailApproval, setSelectedDetailApproval] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
   const fetchApprovalsList = async () => {
@@ -60,7 +64,18 @@ export default function ApprovalList() {
 
       if (res.data?.success) {
         setIsDecisionOpen(false);
-        fetchApprovalsList();
+        // Refresh details modal if it's currently open
+        if (selectedDetailApproval && selectedDetailApproval.id === selectedApproval.id) {
+          // Fetch updated approval list and update selectedDetailApproval
+          const updatedList = await getApprovals();
+          if (updatedList.data?.success) {
+            setApprovals(updatedList.data.data);
+            const freshItem = updatedList.data.data.find(a => a.id === selectedApproval.id);
+            setSelectedDetailApproval(freshItem);
+          }
+        } else {
+          fetchApprovalsList();
+        }
       }
     } catch (err) {
       console.error("Approval action error:", err);
@@ -92,7 +107,14 @@ export default function ApprovalList() {
       ) : (
         <Table headers={["RFQ title", "Supplier", "Total Value", "Requester", "Status", "Date", "Actions"]}>
           {approvals.map((app) => (
-            <tr key={app.id} className="hover:bg-gray-50/50 transition-colors">
+            <tr
+              key={app.id}
+              className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+              onClick={() => {
+                setSelectedDetailApproval(app);
+                setIsDetailOpen(true);
+              }}
+            >
               <td className="px-6 py-4">
                 <div>
                   <p className="font-semibold text-gray-900 leading-tight">{app.rfq?.title}</p>
@@ -125,7 +147,7 @@ export default function ApprovalList() {
               </td>
               <td className="px-6 py-4">
                 {isManager && app.status === "PENDING" ? (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="xs"
                       variant="success"
@@ -192,6 +214,148 @@ export default function ApprovalList() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Detailed Workflow Audit Modal */}
+      <Modal
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        title="Workflow Authorization Details"
+        maxWidth="max-w-lg"
+      >
+        {selectedDetailApproval && (
+          <div className="space-y-6">
+            {/* RFQ & Quote Info */}
+            <div className="p-4 bg-slate-50 rounded-xl border border-gray-150 space-y-3">
+              <div>
+                <span className="text-[10px] text-gray-400 uppercase font-semibold block">Request for Quotation</span>
+                <span className="text-sm font-bold text-gray-900">{selectedDetailApproval.rfq?.title}</span>
+                <p className="text-xs text-gray-500 mt-0.5">Item: {selectedDetailApproval.rfq?.itemName} ({selectedDetailApproval.rfq?.quantity} {selectedDetailApproval.rfq?.unit})</p>
+              </div>
+              <hr className="border-gray-200" />
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold block">Supplier</span>
+                  <span className="font-bold text-gray-800">{selectedDetailApproval.quotation?.vendor?.companyName}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold block">Total Bid Value</span>
+                  <span className="font-bold text-primary-600">Rs. {selectedDetailApproval.quotation?.totalAmount?.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold block">Timeline Offered</span>
+                  <span className="font-medium text-gray-800">{selectedDetailApproval.quotation?.deliveryTimeline}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold block">Payment Terms</span>
+                  <span className="font-medium text-gray-800">{selectedDetailApproval.quotation?.paymentTerms ? `Net ${selectedDetailApproval.quotation?.paymentTerms} Days` : "Immediate"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Audit Trail Timeline */}
+            <div className="space-y-4">
+              <h4 className="font-bold text-xs text-gray-400 uppercase tracking-wider">Audit Trail Log</h4>
+              
+              <div className="relative border-l-2 border-gray-100 pl-6 space-y-6 ml-2 text-xs">
+                {/* Step 1: Submission */}
+                <div className="relative">
+                  <div className="absolute -left-[31px] top-0.5 bg-emerald-500 text-white w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold">
+                    1
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-gray-800">Quotation Shortlisted & Approval Requested</span>
+                      <span className="text-[10px] text-gray-400">{new Date(selectedDetailApproval.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-gray-500 mt-0.5">Requested by: {selectedDetailApproval.requestedBy?.name} ({selectedDetailApproval.requestedBy?.email})</p>
+                    {selectedDetailApproval.remarks && (
+                      <p className="p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-gray-600 italic mt-2">
+                        Justification notes: "{selectedDetailApproval.remarks}"
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Step 2: Decision */}
+                <div className="relative">
+                  <div className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white ${
+                    selectedDetailApproval.status === "PENDING"
+                      ? "bg-amber-500"
+                      : selectedDetailApproval.status === "APPROVED"
+                      ? "bg-emerald-500"
+                      : "bg-rose-500"
+                  }`}>
+                    2
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-gray-800">Manager Authorization Decision</span>
+                      {selectedDetailApproval.decidedAt && (
+                        <span className="text-[10px] text-gray-400">{new Date(selectedDetailApproval.decidedAt).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                    
+                    {selectedDetailApproval.status === "PENDING" ? (
+                      <div className="mt-1">
+                        <span className="px-2 py-0.5 bg-amber-50 text-amber-700 font-bold rounded border border-amber-200 uppercase text-[9px]">
+                          Pending Action
+                        </span>
+                        <p className="text-gray-400 mt-1.5">Waiting for Manager authorization check.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 mt-1">
+                        <div>
+                          <span className={`px-2 py-0.5 font-bold rounded border uppercase text-[9px] ${
+                            selectedDetailApproval.status === "APPROVED"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
+                          }`}>
+                            {selectedDetailApproval.status}
+                          </span>
+                          <span className="text-gray-500 ml-2">by Manager</span>
+                        </div>
+                        {selectedDetailApproval.decidedRemarks && (
+                          <p className="p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-gray-600 italic">
+                            Decision Remarks: "{selectedDetailApproval.decidedRemarks}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions Drawer inside modal */}
+            {isManager && selectedDetailApproval.status === "PENDING" && (
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-gray-150">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setIsDetailOpen(false);
+                    handleOpenDecision(selectedDetailApproval, "reject");
+                  }}
+                  className="gap-1.5"
+                >
+                  <X className="w-4 h-4" /> Reject Bid
+                </Button>
+                <Button
+                  size="sm"
+                  variant="success"
+                  onClick={() => {
+                    setIsDetailOpen(false);
+                    handleOpenDecision(selectedDetailApproval, "approve");
+                  }}
+                  className="gap-1.5"
+                >
+                  <Check className="w-4 h-4" /> Approve & Sign
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </Modal>
     </div>
   );

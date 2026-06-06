@@ -51,12 +51,12 @@ export default function Login() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
-          label="Email"
-          type="email"
-          placeholder="you@example.com"
+          label="Username or Email"
+          type="text"
+          placeholder="Enter username or email"
           icon={Mail}
-          error={errors.email?.message}
-          {...register("email")}
+          error={errors.usernameOrEmail?.message}
+          {...register("usernameOrEmail")}
         />
 
         <div className="relative">

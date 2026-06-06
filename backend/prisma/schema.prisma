@@ -62,16 +62,20 @@ enum InvoiceStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  avatar    String?
-  username  String?  @unique
-  password  String
-  role      Role     @default(PROCUREMENT_OFFICER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  firstName        String?
+  lastName         String?
+  email            String   @unique
+  phone            String?
+  avatar           String?
+  username         String?  @unique
+  password         String
+  role             Role     @default(PROCUREMENT_OFFICER)
+  country          String?
+  professionalInfo String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
   rfqs               RFQ[]           @relation("UserRFQs")
@@ -156,6 +160,7 @@ model Quotation {
   taxPercentage    Float           @default(18.0)
   totalAmount      Float
   deliveryTimeline String
+  paymentTerms     Int?
   notes            String?
   attachmentUrl    String?
   status           QuotationStatus @default(SUBMITTED)

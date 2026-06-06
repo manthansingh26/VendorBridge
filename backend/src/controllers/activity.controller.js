@@ -4,7 +4,14 @@ const ApiResponse = require("../utils/ApiResponse");
 // GET /api/activity-logs
 const getActivityLogs = async (req, res, next) => {
   try {
+    const { module } = req.query;
+    const where = {};
+    if (module && module !== "ALL") {
+      where.module = module;
+    }
+
     const logs = await prisma.activityLog.findMany({
+      where,
       include: {
         user: {
           select: { id: true, name: true, role: true, email: true },
