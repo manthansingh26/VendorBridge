@@ -59,14 +59,21 @@ export default function Login() {
           {...register("email")}
         />
 
-        <Input
-          label="Password"
-          type="password"
-          placeholder="••••••••"
-          icon={Lock}
-          error={errors.password?.message}
-          {...register("password")}
-        />
+        <div className="relative">
+          <Input
+            label="Password"
+            type="password"
+            placeholder="••••••••"
+            icon={Lock}
+            error={errors.password?.message}
+            {...register("password")}
+          />
+          <div className="flex justify-end mt-1">
+            <Link to="/forgot-password" className="text-xs text-primary-600 hover:text-primary-700 font-medium">
+              Forgot password?
+            </Link>
+          </div>
+        </div>
 
         <Button type="submit" loading={isSubmitting} className="w-full">
           Sign In
