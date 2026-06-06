@@ -210,6 +210,20 @@ export default function RFQDetails() {
                 <p className="text-sm text-gray-600 mt-1 leading-relaxed">{rfq.description}</p>
               </div>
 
+              {rfq.attachmentUrl && (
+                <div>
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold block">Attachment Reference</span>
+                  <a
+                    href={rfq.attachmentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-primary-600 hover:underline font-semibold flex items-center gap-1 mt-1 break-all"
+                  >
+                    View Attachment Spec
+                  </a>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 border-t border-b border-gray-100 py-4 text-xs">
                 <div>
                   <span className="text-[10px] text-gray-400 uppercase font-semibold block">Item Name</span>

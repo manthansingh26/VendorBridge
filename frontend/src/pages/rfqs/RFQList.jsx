@@ -290,6 +290,13 @@ export default function RFQList() {
             {...register("description", { required: "RFQ Description is required" })}
           />
 
+          <Input
+            label="Attachment URL (Specifications/Drawings)"
+            placeholder="e.g. https://example.com/specs.pdf"
+            error={errors.attachmentUrl?.message}
+            {...register("attachmentUrl")}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               label="Item Name"
