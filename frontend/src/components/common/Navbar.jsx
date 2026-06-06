@@ -106,9 +106,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/dashboard" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center shadow-md shadow-primary-200">
-                <span className="text-white font-extrabold text-base tracking-wider">VB</span>
-              </div>
+              <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain" />
               <span className="text-xl font-bold tracking-tight text-gray-900">
                 Vendor<span className="text-primary-600">Bridge</span>
               </span>
