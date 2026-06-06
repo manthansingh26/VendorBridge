@@ -27,7 +27,7 @@ export default function Login() {
       const user = await login(data);
       // Redirect based on role
       if (user.role === "ADMIN") {
-        navigate("/admin");
+        navigate("/admin/users");
       } else {
         navigate("/dashboard");
       }

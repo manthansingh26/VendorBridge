@@ -86,7 +86,7 @@ export default function POList() {
                   className="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                   title="View Details"
                 >
-                  <Eye className="w-4.5 h-4.5" />
+                  <Eye className="w-4 h-4" />
                 </button>
               </td>
             </tr>

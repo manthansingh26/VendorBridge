@@ -226,7 +226,7 @@ export default function ApprovalList() {
         {selectedDetailApproval && (
           <div className="space-y-6">
             {/* RFQ & Quote Info */}
-            <div className="p-4 bg-slate-50 rounded-xl border border-gray-150 space-y-3">
+            <div className="p-4 bg-slate-50 rounded-xl border border-gray-200 space-y-3">
               <div>
                 <span className="text-[10px] text-gray-400 uppercase font-semibold block">Request for Quotation</span>
                 <span className="text-sm font-bold text-gray-900">{selectedDetailApproval.rfq?.title}</span>
@@ -329,7 +329,7 @@ export default function ApprovalList() {
 
             {/* Quick Actions Drawer inside modal */}
             {isManager && selectedDetailApproval.status === "PENDING" && (
-              <div className="flex justify-end gap-2.5 pt-4 border-t border-gray-150">
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-gray-200">
                 <Button
                   size="sm"
                   variant="outline"

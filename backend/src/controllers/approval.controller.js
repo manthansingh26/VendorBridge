@@ -20,6 +20,12 @@ const requestApproval = async (req, res, next) => {
       include: { vendor: true },
     });
     if (!quotation) throw new ApiError(404, "Quotation not found.");
+    if (quotation.rfqId !== rfq.id) {
+      throw new ApiError(400, "Quotation does not belong to the selected RFQ.");
+    }
+    if (quotation.status !== "SHORTLISTED") {
+      throw new ApiError(400, "Only shortlisted quotations can be sent for approval.");
+    }
 
     // Create approval record
     const approval = await prisma.approval.create({

@@ -68,9 +68,10 @@ const getDashboardStats = async (req, res, next) => {
 
     // Format roles data
     const rolesData = {
-      USER: 0,
-      STAFF: 0,
       ADMIN: 0,
+      PROCUREMENT_OFFICER: 0,
+      VENDOR: 0,
+      MANAGER: 0,
     };
     usersByRole.forEach((r) => {
       rolesData[r.role] = r._count.role;

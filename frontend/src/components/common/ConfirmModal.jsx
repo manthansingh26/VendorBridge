@@ -28,7 +28,7 @@ export default function ConfirmModal({
           <Button
             variant={variant}
             onClick={onConfirm}
-            isLoading={isLoading}
+            loading={isLoading}
           >
             {confirmText}
           </Button>

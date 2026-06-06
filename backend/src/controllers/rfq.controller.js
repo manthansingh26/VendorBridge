@@ -76,7 +76,7 @@ const getRFQs = async (req, res, next) => {
 
       if (status) {
         if (status === "DRAFT") {
-          where.status = "NONE"; // Prevent vendors from seeing drafts
+          return res.status(200).json(new ApiResponse(200, "No RFQs found.", []));
         } else {
           where.status = status;
         }
@@ -231,6 +231,10 @@ const assignVendors = async (req, res, next) => {
     if (!vendorIds || !Array.isArray(vendorIds) || vendorIds.length === 0) {
       throw new ApiError(400, "Please provide a non-empty array of vendor IDs.");
     }
+    const uniqueVendorIds = [...new Set(vendorIds.filter(Boolean))];
+    if (uniqueVendorIds.length === 0) {
+      throw new ApiError(400, "Please provide at least one valid vendor ID.");
+    }
 
     const rfq = await prisma.rFQ.findUnique({
       where: { id },
@@ -240,12 +244,23 @@ const assignVendors = async (req, res, next) => {
       throw new ApiError(404, "RFQ not found.");
     }
 
+    const vendors = await prisma.vendor.findMany({
+      where: {
+        id: { in: uniqueVendorIds },
+        status: "ACTIVE",
+      },
+    });
+
+    if (vendors.length !== uniqueVendorIds.length) {
+      throw new ApiError(400, "One or more vendor IDs are invalid or inactive.");
+    }
+
     // Delete previous assignments if any, then batch create
     await prisma.rFQVendor.deleteMany({
       where: { rfqId: id },
     });
 
-    const assignments = vendorIds.map((vId) => ({
+    const assignments = uniqueVendorIds.map((vId) => ({
       rfqId: id,
       vendorId: vId,
     }));
@@ -264,14 +279,10 @@ const assignVendors = async (req, res, next) => {
       req.user.id,
       "RFQ Assigned to Vendors",
       "RFQ",
-      `RFQ "${rfq.title}" was assigned to ${vendorIds.length} vendors.`
+      `RFQ "${rfq.title}" was assigned to ${uniqueVendorIds.length} vendors.`
     );
 
     // Notify each vendor who has a matching user account
-    const vendors = await prisma.vendor.findMany({
-      where: { id: { in: vendorIds } },
-    });
-
     for (const vendor of vendors) {
       const targetUser = await prisma.user.findUnique({
         where: { email: vendor.email },

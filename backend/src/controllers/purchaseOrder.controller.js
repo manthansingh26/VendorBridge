@@ -37,6 +37,9 @@ const generatePurchaseOrder = async (req, res, next) => {
       include: { vendor: true },
     });
     if (!quotation) throw new ApiError(404, "Quotation not found.");
+    if (quotation.rfqId !== rfqId) {
+      throw new ApiError(400, "Quotation does not belong to the selected RFQ.");
+    }
     if (quotation.status !== "APPROVED") {
       throw new ApiError(400, `Cannot generate PO. Quotation status must be APPROVED (Current: ${quotation.status}).`);
     }
@@ -202,7 +205,7 @@ const updatePOStatus = async (req, res, next) => {
       throw new ApiError(404, "Purchase Order not found.");
     }
 
-    // Access control: VENDOR can only change to ACCEPTED or CANCELLED, etc.
+    // Access control: VENDOR can only change to ACCEPTED or CANCELLED, officers/admins manage the rest.
     if (req.user.role === "VENDOR") {
       const vendorProfile = await prisma.vendor.findUnique({
         where: { email: req.user.email },
@@ -213,6 +216,8 @@ const updatePOStatus = async (req, res, next) => {
       if (status !== "ACCEPTED" && status !== "CANCELLED") {
         throw new ApiError(400, "Vendors are only allowed to ACCEPT or CANCEL purchase orders.");
       }
+    } else if (!["ADMIN", "PROCUREMENT_OFFICER"].includes(req.user.role)) {
+      throw new ApiError(403, "You do not have permission to update purchase order status.");
     }
 
     const updatedPO = await prisma.purchaseOrder.update({

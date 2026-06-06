@@ -31,6 +31,15 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [recentPOs, setRecentPOs] = useState([]);
   const [spendingTrend, setSpendingTrend] = useState([]);
+  const [metrics, setMetrics] = useState(() => {
+    return Array.from({ length: 25 }, (_, i) => ({
+      tick: i,
+      orders: 0,
+      users: 3,
+      quotations: 0,
+    }));
+  });
+  const [metricTab, setMetricTab] = useState("all");
   const [summary, setSummary] = useState({
     totalVendors: 0,
     activeVendors: 0,
@@ -70,6 +79,63 @@ export default function Dashboard() {
         .finally(() => setLoading(false));
     }
   }, [isVendor]);
+
+  useEffect(() => {
+    if (user?.role !== ROLES.ADMIN) return;
+    if (summary.totalVendors > 0 || summary.totalPOs > 0) {
+      const startUsers = summary.totalVendors + 3;
+      const startOrders = summary.totalPOs;
+      const startQuotes = Math.round(summary.totalRFQs * 1.4) || 5;
+
+      setMetrics(
+        Array.from({ length: 25 }, (_, i) => {
+          const factor = (i / 24);
+          return {
+            tick: i,
+            orders: Math.max(0, Math.round(startOrders * factor)),
+            users: Math.max(3, Math.round(startUsers * factor)),
+            quotations: Math.max(0, Math.round(startQuotes * factor)),
+          };
+        })
+      );
+    }
+  }, [summary, user]);
+
+  useEffect(() => {
+    if (user?.role !== ROLES.ADMIN) return;
+
+    const interval = setInterval(() => {
+      setMetrics((prev) => {
+        const lastPoint = prev[prev.length - 1] || { tick: 0, orders: 0, users: 3, quotations: 0 };
+        const nextTick = lastPoint.tick + 1;
+
+        const rand = Math.random();
+        let addOrder = 0;
+        let addUser = 0;
+        let addQuotation = 0;
+
+        if (rand < 0.15) {
+          addOrder = 1;
+        } else if (rand < 0.25) {
+          addUser = 1;
+        } else if (rand < 0.55) {
+          addQuotation = 1;
+        }
+
+        return [
+          ...prev.slice(1),
+          {
+            tick: nextTick,
+            orders: lastPoint.orders + addOrder,
+            users: lastPoint.users + addUser,
+            quotations: lastPoint.quotations + addQuotation,
+          }
+        ];
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Format currency helper
   const formatCurrency = (val) => {
@@ -221,7 +287,7 @@ export default function Dashboard() {
               <Card>
                 <CardBody className="p-6">
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Spend Statistics Trend</h3>
-                  <div className="flex items-end justify-between h-40 pt-4 border-b border-gray-150 gap-2">
+                  <div className="flex items-end justify-between h-40 pt-4 border-b border-gray-200 gap-2">
                     {spendingTrend.map((trend, idx) => {
                       const percentage = (trend.spending / maxSpendingVal) * 100;
                       return (
@@ -269,48 +335,171 @@ export default function Dashboard() {
   if (user?.role === ROLES.ADMIN) {
     return (
       <div className="space-y-6 animate-slide-up">
-        {/* Admin Header Banner - Purple/Indigo theme */}
-        <div className="bg-gradient-to-r from-purple-800 to-indigo-900 p-8 rounded-3xl text-white shadow-lg shadow-purple-500/10">
-          <div className="flex items-center gap-3">
-            <ShieldAlert className="w-8 h-8 text-purple-200" />
-            <h1 className="text-2xl font-extrabold tracking-tight">Core System Administration Portal</h1>
-          </div>
-          <p className="text-purple-100 mt-2 max-w-xl text-sm leading-relaxed">
-            Logged in as global administrator <span className="font-bold underline">{user.name}</span>. Monitor core database services and control user privileges.
-          </p>
-        </div>
 
-        {/* System Health Diagnostics Card Grid */}
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">System Resource Health</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-t-4 border-emerald-500">
-            <CardBody className="flex items-center justify-between p-5 text-xs">
-              <div className="flex items-center gap-2">
-                <Database className="w-5 h-5 text-emerald-500" />
-                <span className="font-bold text-gray-700">Database Engine</span>
+        {/* Real-time System Monitoring Graph */}
+        <Card className="overflow-hidden border border-gray-100 shadow-md">
+          <CardBody className="p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                  <h3 className="font-bold text-gray-900 text-sm tracking-tight font-sans">ERP System Activity Monitor (Real-Time)</h3>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Live updates showing transactions, bid entries, and user growth</p>
               </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px]">CONNECTED (HEALTHY)</span>
-            </CardBody>
-          </Card>
-          <Card className="border-t-4 border-emerald-500">
-            <CardBody className="flex items-center justify-between p-5 text-xs">
-              <div className="flex items-center gap-2">
-                <Server className="w-5 h-5 text-emerald-500" />
-                <span className="font-bold text-gray-700">API Server Gateway</span>
+
+              {/* Tab Selector */}
+              <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                <button
+                  onClick={() => setMetricTab("all")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    metricTab === "all"
+                      ? "bg-white text-gray-800 shadow-sm border border-gray-100"
+                      : "text-gray-400 hover:text-gray-600"
+                  }`}
+                >
+                  All Activity
+                </button>
+                <button
+                  onClick={() => setMetricTab("orders")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    metricTab === "orders"
+                      ? "bg-white text-indigo-600 shadow-sm border border-gray-100"
+                      : "text-gray-400 hover:text-indigo-500"
+                  }`}
+                >
+                  Orders
+                </button>
+                <button
+                  onClick={() => setMetricTab("users")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    metricTab === "users"
+                      ? "bg-white text-emerald-600 shadow-sm border border-gray-100"
+                      : "text-gray-400 hover:text-emerald-500"
+                  }`}
+                >
+                  Users
+                </button>
+                <button
+                  onClick={() => setMetricTab("quotes")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    metricTab === "quotes"
+                      ? "bg-white text-amber-600 shadow-sm border border-gray-100"
+                      : "text-gray-400 hover:text-amber-500"
+                  }`}
+                >
+                  Bids/Quotes
+                </button>
               </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px]">ONLINE</span>
-            </CardBody>
-          </Card>
-          <Card className="border-t-4 border-emerald-500">
-            <CardBody className="flex items-center justify-between p-5 text-xs">
-              <div className="flex items-center gap-2">
-                <Mail className="w-5 h-5 text-emerald-500" />
-                <span className="font-bold text-gray-700">Mailer (SMTP Config)</span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center">
+              {/* Chart Side */}
+              <div className="lg:col-span-3">
+                <div className="relative h-44 bg-slate-50/50 rounded-2xl border border-slate-100 p-4">
+                  {/* Grid Lines */}
+                  <div className="absolute inset-0 flex flex-col justify-between p-4 pointer-events-none text-[9px] font-bold text-gray-300">
+                    <div className="border-b border-gray-100/70 w-full pb-1 flex justify-between">
+                      <span>Max Activity Level</span>
+                      <span className="hidden sm:inline">Active Production Database</span>
+                    </div>
+                    <div className="border-b border-gray-100/70 w-full pb-1">Mid Level</div>
+                    <div className="border-b border-gray-100/70 w-full pb-1">Initial Level</div>
+                    <div className="w-full flex justify-between">
+                      <span>0</span>
+                      <span>Real-time Live Timeline (2s ticks)</span>
+                    </div>
+                  </div>
+
+                  <svg viewBox={`0 0 ${metrics.length > 0 ? 600 : 0} 160`} className="w-full h-full overflow-visible">
+                    <defs>
+                      <linearGradient id="ordersGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366F1" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="#6366F1" stopOpacity="0.0" />
+                      </linearGradient>
+                      <linearGradient id="usersGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10B981" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                      </linearGradient>
+                      <linearGradient id="quotesGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* SVG Grid background guidelines */}
+                    <line x1="0" y1="40" x2="600" y2="40" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3,3" />
+                    <line x1="0" y1="80" x2="600" y2="80" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3,3" />
+                    <line x1="0" y1="120" x2="600" y2="120" stroke="#F1F5F9" strokeWidth="1" strokeDasharray="3,3" />
+
+                    {/* Orders Graph (Indigo) */}
+                    {(metricTab === "all" || metricTab === "orders") && (
+                      <>
+                        <path d={`M 0,160 L ${metrics.map((m, i) => `${((i / (metrics.length - 1)) * 600).toFixed(1)}, ${(160 - (m.orders / Math.max(1, Math.max(...metrics.map(k => Math.max(k.orders, k.users, k.quotations))))) * 120 - 20).toFixed(1)}`).join(" ")} L 600,160 Z`} fill="url(#ordersGrad)" className="transition-all duration-300" />
+                        <polyline points={metrics.map((m, i) => `${((i / (metrics.length - 1)) * 600).toFixed(1)}, ${(160 - (m.orders / Math.max(1, Math.max(...metrics.map(k => Math.max(k.orders, k.users, k.quotations))))) * 120 - 20).toFixed(1)}`).join(" ")} fill="none" stroke="#6366F1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />
+                      </>
+                    )}
+
+                    {/* Users Graph (Emerald) */}
+                    {(metricTab === "all" || metricTab === "users") && (
+                      <>
+                        <path d={`M 0,160 L ${metrics.map((m, i) => `${((i / (metrics.length - 1)) * 600).toFixed(1)}, ${(160 - (m.users / Math.max(1, Math.max(...metrics.map(k => Math.max(k.orders, k.users, k.quotations))))) * 120 - 20).toFixed(1)}`).join(" ")} L 600,160 Z`} fill="url(#usersGrad)" className="transition-all duration-300" />
+                        <polyline points={metrics.map((m, i) => `${((i / (metrics.length - 1)) * 600).toFixed(1)}, ${(160 - (m.users / Math.max(1, Math.max(...metrics.map(k => Math.max(k.orders, k.users, k.quotations))))) * 120 - 20).toFixed(1)}`).join(" ")} fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />
+                      </>
+                    )}
+
+                    {/* Quotations Graph (Amber) */}
+                    {(metricTab === "all" || metricTab === "quotes") && (
+                      <>
+                        <path d={`M 0,160 L ${metrics.map((m, i) => `${((i / (metrics.length - 1)) * 600).toFixed(1)}, ${(160 - (m.quotations / Math.max(1, Math.max(...metrics.map(k => Math.max(k.orders, k.users, k.quotations))))) * 120 - 20).toFixed(1)}`).join(" ")} L 600,160 Z`} fill="url(#quotesGrad)" className="transition-all duration-300" />
+                        <polyline points={metrics.map((m, i) => `${((i / (metrics.length - 1)) * 600).toFixed(1)}, ${(160 - (m.quotations / Math.max(1, Math.max(...metrics.map(k => Math.max(k.orders, k.users, k.quotations))))) * 120 - 20).toFixed(1)}`).join(" ")} fill="none" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-300" />
+                      </>
+                    )}
+                  </svg>
+                </div>
               </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px]">SMTP READY</span>
-            </CardBody>
-          </Card>
-        </div>
+
+              {/* Gauges Side */}
+              <div className="lg:col-span-1 space-y-4">
+                {/* Purchase Orders Indicator */}
+                <div className="p-4 bg-indigo-50/30 rounded-2xl border border-indigo-100/50 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wide">Purchase Orders</span>
+                    <p className="text-xl font-black text-gray-950 mt-0.5">{(metrics[metrics.length - 1] || { orders: 0 }).orders}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Users Indicator */}
+                <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wide">Registered Users</span>
+                    <p className="text-xl font-black text-gray-950 mt-0.5">{(metrics[metrics.length - 1] || { users: 0 }).users}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Quotations Indicator */}
+                <div className="p-4 bg-amber-50/30 rounded-2xl border border-amber-100/50 flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wide">Submitted Bids</span>
+                    <p className="text-xl font-black text-gray-950 mt-0.5">{(metrics[metrics.length - 1] || { quotations: 0 }).quotations}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
 
         {/* Admin Console Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -250,7 +250,7 @@ export default function PODetails() {
                     <span className="font-semibold text-gray-800">Rs. {po.taxAmount.toLocaleString()}</span>
                   </div>
                   <hr className="border-gray-100" />
-                  <div className="flex justify-between text-sm font-bold text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-150">
+                  <div className="flex justify-between text-sm font-bold text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <span>Gross Total:</span>
                     <span className="text-primary-600">Rs. {po.totalAmount.toLocaleString()}</span>
                   </div>

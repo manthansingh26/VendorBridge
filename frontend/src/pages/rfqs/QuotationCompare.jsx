@@ -141,7 +141,7 @@ export default function QuotationCompare() {
               className={`relative overflow-hidden transition-all duration-300 ${
                 isLowest
                   ? "border-2 border-emerald-500 shadow-md ring-2 ring-emerald-500/10"
-                  : "border border-gray-150 hover:border-gray-300 hover:shadow-sm"
+                  : "border border-gray-200 hover:border-gray-300 hover:shadow-sm"
               }`}
             >
               {isLowest && (
@@ -214,7 +214,7 @@ export default function QuotationCompare() {
                   </div>
                 )}
 
-                <div className="pt-2 border-t border-gray-150 flex items-center justify-between">
+                <div className="pt-2 border-t border-gray-200 flex items-center justify-between">
                   <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${STATUS_COLORS[quote.status]}`}>
                     {quote.status}
                   </span>

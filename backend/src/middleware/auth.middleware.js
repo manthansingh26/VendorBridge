@@ -41,11 +41,11 @@ const authMiddleware = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      return next(new ApiError(401, "Invalid token."));
-    }
     if (error instanceof jwt.TokenExpiredError) {
       return next(new ApiError(401, "Token expired. Please login again."));
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return next(new ApiError(401, "Invalid token."));
     }
     next(error);
   }

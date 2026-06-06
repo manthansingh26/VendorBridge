@@ -40,7 +40,7 @@ export default function RFQDetails() {
   const [selectedQuotationForApproval, setSelectedQuotationForApproval] = useState(null);
 
   // Form hooks
-  const { register: regQuote, handleSubmit: handleQuoteSubmit, watch: watchQuote, formState: { errors: errorsQuote }, reset: resetQuote } = useForm({
+  const { register: registerQuote, handleSubmit: handleQuoteSubmit, watch: watchQuote, formState: { errors: errorsQuote }, reset: resetQuote } = useForm({
     defaultValues: { taxPercentage: 18.0 }
   });
   
@@ -212,7 +212,7 @@ export default function RFQDetails() {
               </div>
 
               {rfq.attachmentUrl && (
-                <div className="p-3 bg-slate-50 border border-gray-150 rounded-xl space-y-2">
+                <div className="p-3 bg-slate-50 border border-gray-200 rounded-xl space-y-2">
                   <span className="text-[10px] text-gray-400 uppercase font-semibold block">Attachment Specifications</span>
                   <div className="flex gap-2">
                     <a

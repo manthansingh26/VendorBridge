@@ -15,8 +15,8 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get("/", getQuotations);
-router.get("/:id", getQuotationById);
 router.get("/rfq/:rfqId", authorize("ADMIN", "PROCUREMENT_OFFICER", "MANAGER"), getQuotationsByRFQ);
+router.get("/:id", getQuotationById);
 
 router.post("/", authorize("VENDOR"), submitQuotation);
 router.patch("/:id", authorize("VENDOR"), updateQuotation);

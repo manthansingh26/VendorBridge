@@ -1,5 +1,5 @@
 {
-  "name": "Odoo x KSV Hackathon 2026",
+  "name": "odoo-ksv-hackathon-2026-backend",
   "version": "1.0.0",
   "description": "Backend API for Odoo x KSV Hackathon 2026",
   "main": "src/server.js",

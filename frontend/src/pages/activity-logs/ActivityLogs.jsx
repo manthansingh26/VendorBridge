@@ -48,7 +48,7 @@ export default function ActivityLogs() {
         </div>
 
         {/* Pill Tabs */}
-        <div className="flex flex-wrap items-center bg-gray-100 p-1 rounded-xl gap-0.5 border border-gray-150 self-start md:self-auto">
+        <div className="flex flex-wrap items-center bg-gray-100 p-1 rounded-xl gap-0.5 border border-gray-200 self-start md:self-auto">
           {MODULE_TABS.map((tab) => (
             <button
               key={tab.id}

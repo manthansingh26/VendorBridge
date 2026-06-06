@@ -1,9 +1,16 @@
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const prisma = require("../config/db");
 const generateToken = require("../utils/generateToken");
 const ApiError = require("../utils/ApiError");
 const ApiResponse = require("../utils/ApiResponse");
-const { registerSchema, loginSchema } = require("../validations/auth.validation");
+const { sendInvoiceEmail } = require("../services/email.service");
+const {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} = require("../validations/auth.validation");
 
 // POST /api/auth/register
 const register = async (req, res, next) => {
@@ -32,9 +39,13 @@ const register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(12);
     const hashedPassword = await bcrypt.hash(validated.password, salt);
 
-    // Validate role
+    // Validate role. Admin accounts should be created by an existing admin.
     let selectedRole = "PROCUREMENT_OFFICER";
-    if (validated.role && ["ADMIN", "PROCUREMENT_OFFICER", "VENDOR", "MANAGER"].includes(validated.role)) {
+    const selfRegistrationRoles = ["PROCUREMENT_OFFICER", "VENDOR", "MANAGER"];
+    if (validated.role && !selfRegistrationRoles.includes(validated.role)) {
+      throw new ApiError(403, "This role cannot be selected during public registration.");
+    }
+    if (validated.role) {
       selectedRole = validated.role;
     }
 
@@ -133,10 +144,6 @@ const getMe = async (req, res, next) => {
   }
 };
 
-const jwt = require("jsonwebtoken");
-const { sendInvoiceEmail } = require("../services/email.service");
-const { forgotPasswordSchema, resetPasswordSchema } = require("../validations/auth.validation");
-
 // POST /api/auth/forgot-password
 const forgotPassword = async (req, res, next) => {
   try {
@@ -152,7 +159,12 @@ const forgotPassword = async (req, res, next) => {
       );
     }
 
-    const resetToken = jwt.sign({ email: user.email }, process.env.JWT_SECRET || "fallback_secret", {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new ApiError(500, "JWT secret is not configured.");
+    }
+
+    const resetToken = jwt.sign({ email: user.email }, jwtSecret, {
       expiresIn: "15m",
     });
 
@@ -163,11 +175,11 @@ const forgotPassword = async (req, res, next) => {
 
     await sendInvoiceEmail(user.email, "Password Reset Request - VendorBridge ERP", textMessage);
 
+    const responseData =
+      process.env.NODE_ENV === "production" ? null : { resetUrl };
+
     res.status(200).json(
-      new ApiResponse(200, "Password reset link sent successfully.", {
-        resetToken,
-        resetUrl,
-      })
+      new ApiResponse(200, "Password reset link sent successfully.", responseData)
     );
   } catch (error) {
     next(error);
@@ -181,8 +193,15 @@ const resetPassword = async (req, res, next) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(validated.token, process.env.JWT_SECRET || "fallback_secret");
+      const jwtSecret = process.env.JWT_SECRET;
+      if (!jwtSecret) {
+        throw new ApiError(500, "JWT secret is not configured.");
+      }
+      decoded = jwt.verify(validated.token, jwtSecret);
     } catch (err) {
+      if (err instanceof ApiError) {
+        throw err;
+      }
       throw new ApiError(400, "Invalid or expired password reset token.");
     }
 

@@ -32,6 +32,9 @@ const generateInvoice = async (req, res, next) => {
     if (!po) {
       throw new ApiError(404, "Purchase Order not found.");
     }
+    if (po.status !== "ACCEPTED") {
+      throw new ApiError(400, `Cannot generate invoice. Purchase Order status must be ACCEPTED (Current: ${po.status}).`);
+    }
 
     // 3. Generate unique invoice number
     const invoiceNumber = generateInvoiceNumber();

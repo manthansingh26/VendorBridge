@@ -339,7 +339,7 @@ export default function RFQList() {
       {/* Creation Modal */}
       <Modal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} title="Create Request for Quotation (RFQ)" maxWidth="max-w-xl">
         {/* Stepper Header */}
-        <div className="flex items-center justify-between mb-6 border-b border-gray-150 pb-4">
+        <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
           <div className="flex items-center gap-2">
             <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
               step === 1 ? "bg-primary-600 text-white shadow-sm" : "bg-emerald-100 text-emerald-700"

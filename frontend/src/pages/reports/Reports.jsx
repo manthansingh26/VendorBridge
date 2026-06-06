@@ -78,7 +78,7 @@ export default function Reports() {
 
         {/* Date Filter Inputs & Print Button */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-150 shadow-sm">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-gray-200 shadow-sm">
             <Calendar className="w-4 h-4 text-gray-400" />
             <input
               type="date"
@@ -321,11 +321,11 @@ export default function Reports() {
                       {/* CSS progress bar */}
                       <div className="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
                         <div
-                          style={{ width: `${v.successRate || 75}%` }}
+                          style={{ width: `${v.successRate ?? 0}%` }}
                           className="bg-emerald-500 h-full rounded-full"
                         />
                       </div>
-                      <span className="text-xs font-bold text-gray-800">{(v.successRate || 75).toFixed(0)}%</span>
+                      <span className="text-xs font-bold text-gray-800">{(v.successRate ?? 0).toFixed(0)}%</span>
                     </div>
                   </td>
                 </tr>

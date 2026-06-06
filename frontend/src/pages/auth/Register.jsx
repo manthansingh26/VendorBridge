@@ -148,7 +148,6 @@ export default function Register() {
               { value: "PROCUREMENT_OFFICER", label: "Procurement Officer" },
               { value: "MANAGER", label: "Procurement Manager" },
               { value: "VENDOR", label: "Supplier / Vendor Portal" },
-              { value: "ADMIN", label: "System Administrator" },
             ]}
             error={errors.role?.message}
             {...register("role")}
