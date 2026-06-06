@@ -180,14 +180,26 @@ const getInvoicePDFFile = async (req, res, next) => {
       throw new ApiError(404, "Invoice not found.");
     }
 
-    if (!invoice.pdfUrl) {
-      throw new ApiError(404, "Invoice PDF has not been generated.");
-    }
+    let absolutePath = invoice.pdfUrl ? path.join(__dirname, "../..", invoice.pdfUrl) : null;
 
-    const absolutePath = path.join(__dirname, "../..", invoice.pdfUrl);
-
-    if (!fs.existsSync(absolutePath)) {
-      throw new ApiError(404, "Invoice PDF file does not exist on server disk.");
+    if (!absolutePath || !fs.existsSync(absolutePath)) {
+      // PDF does not exist or has not been generated yet (e.g. seeded data). Generate it on-the-fly.
+      try {
+        const po = await prisma.purchaseOrder.findUnique({
+          where: { id: invoice.poId },
+          include: { vendor: true, quotation: true },
+        });
+        const generatedPdfUrl = await generateInvoicePDF(invoice, po, po.vendor);
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { pdfUrl: generatedPdfUrl },
+        });
+        invoice.pdfUrl = generatedPdfUrl;
+        absolutePath = path.join(__dirname, "../..", generatedPdfUrl);
+      } catch (pdfErr) {
+        console.error("On-demand PDF generation failed:", pdfErr);
+        throw new ApiError(500, "Failed to generate Invoice PDF on demand.");
+      }
     }
 
     res.setHeader("Content-Type", "application/pdf");
@@ -212,8 +224,23 @@ const emailInvoice = async (req, res, next) => {
       throw new ApiError(404, "Invoice not found.");
     }
 
-    if (!invoice.pdfUrl) {
-      throw new ApiError(400, "Cannot email invoice. PDF has not been generated.");
+    let absolutePath = invoice.pdfUrl ? path.join(__dirname, "../..", invoice.pdfUrl) : null;
+    if (!absolutePath || !fs.existsSync(absolutePath)) {
+      try {
+        const po = await prisma.purchaseOrder.findUnique({
+          where: { id: invoice.poId },
+          include: { vendor: true, quotation: true },
+        });
+        const generatedPdfUrl = await generateInvoicePDF(invoice, po, po.vendor);
+        await prisma.invoice.update({
+          where: { id: invoice.id },
+          data: { pdfUrl: generatedPdfUrl },
+        });
+        invoice.pdfUrl = generatedPdfUrl;
+      } catch (pdfErr) {
+        console.error("On-demand PDF generation failed for email:", pdfErr);
+        throw new ApiError(500, "Failed to generate Invoice PDF on demand for emailing.");
+      }
     }
 
     const toEmail = invoice.vendor.email;

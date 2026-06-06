@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getInvoiceById, emailInvoice, updateInvoiceStatus, getInvoicePDF } from "../../api/invoice.api";
+import { getInvoiceById, emailInvoice, updateInvoiceStatus, getInvoicePDFUrl } from "../../api/invoice.api";
 import { useAuth } from "../../context/AuthContext";
 import { ROLES, STATUS_COLORS } from "../../utils/constants";
 import Card, { CardBody } from "../../components/ui/Card";
@@ -24,6 +24,7 @@ export default function InvoiceDetails() {
 
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailSuccess, setEmailSuccess] = useState(false);
 
@@ -32,9 +33,12 @@ export default function InvoiceDetails() {
       const res = await getInvoiceById(id);
       if (res.data?.success) {
         setInvoice(res.data.data);
+      } else {
+        setError(res.data?.message || "Failed to load invoice details.");
       }
     } catch (err) {
       console.error("Error loading invoice details:", err);
+      setError(err.message || "Network error loading invoice details.");
     } finally {
       setLoading(false);
     }
@@ -42,11 +46,23 @@ export default function InvoiceDetails() {
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     fetchInvoice();
   }, [id]);
 
   if (loading) {
     return <div className="py-12 text-center text-gray-500">Loading invoice details...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="py-12 text-center text-rose-500 space-y-4">
+        <p className="font-semibold">Error: {error}</p>
+        <Button onClick={() => { setError(null); fetchInvoice(); }}>
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   if (!invoice) {
@@ -78,22 +94,7 @@ export default function InvoiceDetails() {
     }
   };
 
-  const [pdfLoading, setPdfLoading] = useState(false);
 
-  const handleDownloadPDF = async () => {
-    setPdfLoading(true);
-    try {
-      const res = await getInvoicePDF(invoice.id);
-      const file = new Blob([res.data], { type: "application/pdf" });
-      const fileURL = URL.createObjectURL(file);
-      window.open(fileURL, "_blank");
-    } catch (err) {
-      console.error("Failed to download PDF:", err);
-      alert(err.response?.data?.message || "Failed to download PDF.");
-    } finally {
-      setPdfLoading(false);
-    }
-  };
 
   const handleMarkPaid = async () => {
     try {
@@ -137,15 +138,14 @@ export default function InvoiceDetails() {
           </Button>
 
           {/* Download/View PDF */}
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            onClick={handleDownloadPDF}
-            isLoading={pdfLoading}
+          <a
+            href={`${getInvoicePDFUrl(invoice.id)}?token=${localStorage.getItem("token")}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-3 py-2 h-9 gap-1.5"
           >
             <Download className="w-4 h-4" /> View PDF
-          </Button>
+          </a>
 
           {/* Pay button */}
           {isManager && invoice.status !== "PAID" && invoice.status !== "CANCELLED" && (
@@ -261,25 +261,25 @@ export default function InvoiceDetails() {
                   <div className="flex justify-between text-gray-500">
                     <span>Subtotal:</span>
                     <span className="font-semibold text-gray-800">
-                      Rs. {(invoice.totalAmount - invoice.taxAmount).toLocaleString()}
+                      Rs. {((invoice?.totalAmount || 0) - (invoice?.taxAmount || 0)).toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between text-gray-400 pl-3 border-l border-gray-200">
                     <span>CGST (5%):</span>
-                    <span className="font-mono text-gray-700">Rs. {(invoice.taxAmount / 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span className="font-mono text-gray-700">Rs. {((invoice?.taxAmount || 0) / 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-gray-400 pl-3 border-l border-gray-200">
                     <span>SGST (5%):</span>
-                    <span className="font-mono text-gray-700">Rs. {(invoice.taxAmount / 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span className="font-mono text-gray-700">Rs. {((invoice?.taxAmount || 0) / 2).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-gray-500 font-semibold">
                     <span>Total GST Amount:</span>
-                    <span className="text-gray-800 font-mono">Rs. {invoice.taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    <span className="text-gray-800 font-mono">Rs. {(invoice?.taxAmount || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
                   <hr className="border-gray-100" />
                   <div className="flex justify-between text-sm font-bold text-gray-900 bg-gray-50 p-3 rounded-lg border border-gray-150">
                     <span>Gross Invoice:</span>
-                    <span className="text-primary-600">Rs. {invoice.totalAmount.toLocaleString()}</span>
+                    <span className="text-primary-600">Rs. {(invoice?.totalAmount || 0).toLocaleString()}</span>
                   </div>
                 </div>
               </div>

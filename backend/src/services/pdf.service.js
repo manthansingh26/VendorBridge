@@ -27,8 +27,15 @@ const generateInvoicePDF = (invoice, po, vendor) => {
       doc.pipe(stream);
 
       // 1. Header Area
-      doc.fontSize(22).fillColor("#2563EB").text("VendorBridge ERP", 50, 50);
-      doc.fontSize(9).fillColor("#6B7280").text("Procurement & Vendor Management Portal", 50, 75);
+      const logoPath = path.join(__dirname, "../assets/z.png");
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 50, 35, { width: 40 });
+        doc.fontSize(22).fillColor("#2563EB").text("VendorBridge ERP", 100, 42);
+        doc.fontSize(9).fillColor("#6B7280").text("Procurement & Vendor Management Portal", 100, 65);
+      } else {
+        doc.fontSize(22).fillColor("#2563EB").text("VendorBridge ERP", 50, 50);
+        doc.fontSize(9).fillColor("#6B7280").text("Procurement & Vendor Management Portal", 50, 75);
+      }
 
       // Line separator
       doc.moveTo(50, 95).lineTo(550, 95).strokeColor("#E5E7EB").stroke();
