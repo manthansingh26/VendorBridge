@@ -13,6 +13,8 @@ import RoleBasedRoute from "../components/common/RoleBasedRoute";
 // Pages
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import ResetPassword from "../pages/auth/ResetPassword";
 import Dashboard from "../pages/Dashboard";
 import Profile from "../pages/Profile";
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -46,6 +48,14 @@ export default function AppRoutes() {
         <Route
           path="/register"
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />}
+        />
+        <Route
+          path="/forgot-password"
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ForgotPassword />}
+        />
+        <Route
+          path="/reset-password"
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <ResetPassword />}
         />
       </Route>
 

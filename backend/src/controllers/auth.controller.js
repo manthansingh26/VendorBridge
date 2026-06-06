@@ -113,4 +113,79 @@ const getMe = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe };
+const jwt = require("jsonwebtoken");
+const { sendInvoiceEmail } = require("../services/email.service");
+const { forgotPasswordSchema, resetPasswordSchema } = require("../validations/auth.validation");
+
+// POST /api/auth/forgot-password
+const forgotPassword = async (req, res, next) => {
+  try {
+    const validated = forgotPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({
+      where: { email: validated.email },
+    });
+
+    if (!user) {
+      return res.status(200).json(
+        new ApiResponse(200, "If the email is registered, a password reset link has been sent.")
+      );
+    }
+
+    const resetToken = jwt.sign({ email: user.email }, process.env.JWT_SECRET || "fallback_secret", {
+      expiresIn: "15m",
+    });
+
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`;
+
+    const textMessage = `Dear ${user.name},\n\nYou requested a password reset for your VendorBridge ERP account. Please click on the link below or copy and paste it into your browser to reset your password:\n\n${resetUrl}\n\nThis link will expire in 15 minutes.\n\nIf you did not request this, you can safely ignore this email.`;
+
+    await sendInvoiceEmail(user.email, "Password Reset Request - VendorBridge ERP", textMessage);
+
+    res.status(200).json(
+      new ApiResponse(200, "Password reset link sent successfully.", {
+        resetToken,
+        resetUrl,
+      })
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/auth/reset-password
+const resetPassword = async (req, res, next) => {
+  try {
+    const validated = resetPasswordSchema.parse(req.body);
+
+    let decoded;
+    try {
+      decoded = jwt.verify(validated.token, process.env.JWT_SECRET || "fallback_secret");
+    } catch (err) {
+      throw new ApiError(400, "Invalid or expired password reset token.");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: decoded.email },
+    });
+
+    if (!user) {
+      throw new ApiError(404, "User not found.");
+    }
+
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(validated.password, salt);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    res.status(200).json(new ApiResponse(200, "Password reset successfully. You can now login."));
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { register, login, getMe, forgotPassword, resetPassword };
