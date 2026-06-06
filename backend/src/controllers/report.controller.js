@@ -129,6 +129,7 @@ const getVendorPerformance = async (req, res, next) => {
       const successRate = totalSubmitted > 0 ? (totalApproved / totalSubmitted) * 100 : 0;
       
       const totalBusiness = v.purchaseOrders.reduce((sum, po) => sum + po.totalAmount, 0);
+      const purchaseOrdersCount = v.purchaseOrders.length;
 
       return {
         id: v.id,
@@ -139,6 +140,7 @@ const getVendorPerformance = async (req, res, next) => {
         totalApproved,
         successRate: parseFloat(successRate.toFixed(1)),
         totalBusiness: parseFloat(totalBusiness.toFixed(2)),
+        purchaseOrdersCount,
       };
     });
 
