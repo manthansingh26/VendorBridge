@@ -69,11 +69,20 @@ const getRFQs = async (req, res, next) => {
         return res.status(200).json(new ApiResponse(200, "No RFQs found.", []));
       }
 
-      // Filter RFQs assigned to this vendor and only retrieve if status is not DRAFT
+      // Filter RFQs assigned to this vendor
       where.assignedVendors = {
         some: { vendorId: vendorProfile.id },
       };
-      where.status = { not: "DRAFT" };
+
+      if (status) {
+        if (status === "DRAFT") {
+          where.status = "NONE"; // Prevent vendors from seeing drafts
+        } else {
+          where.status = status;
+        }
+      } else {
+        where.status = { not: "DRAFT" };
+      }
     }
 
     const rfqs = await prisma.rFQ.findMany({
