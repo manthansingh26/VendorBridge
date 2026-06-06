@@ -432,7 +432,7 @@ export default function Dashboard() {
                     <h4 className="font-bold text-gray-800 text-sm">New Quotation Request</h4>
                     <p className="text-xs text-gray-400 mt-1">Initiate a stepper RFQ with specs document and matched suppliers.</p>
                   </div>
-                  <Button onClick={() => navigate("/rfqs")} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white w-fit gap-1">
+                  <Button onClick={() => navigate("/rfqs?action=create")} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white w-fit gap-1">
                     Create RFQ <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>
