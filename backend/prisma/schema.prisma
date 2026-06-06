@@ -7,60 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  PROCUREMENT_OFFICER
-  VENDOR
-  MANAGER
-}
-
-enum VendorStatus {
-  ACTIVE
-  INACTIVE
-  BLACKLISTED
-  PENDING
-}
-
-enum RFQStatus {
-  DRAFT
-  SENT
-  QUOTATION_RECEIVED
-  UNDER_COMPARISON
-  APPROVAL_PENDING
-  APPROVED
-  REJECTED
-  CLOSED
-}
-
-enum QuotationStatus {
-  SUBMITTED
-  SHORTLISTED
-  REJECTED
-  APPROVED
-}
-
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum PurchaseOrderStatus {
-  GENERATED
-  SENT
-  ACCEPTED
-  COMPLETED
-  CANCELLED
-}
-
-enum InvoiceStatus {
-  GENERATED
-  SENT
-  PAID
-  OVERDUE
-  CANCELLED
-}
-
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -69,7 +15,7 @@ model User {
   avatar    String?
   username  String?  @unique
   password  String
-  role      Role     @default(PROCUREMENT_OFFICER)
+  role      String   @default("PROCUREMENT_OFFICER")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -96,7 +42,7 @@ model Vendor {
   city          String
   state         String
   pincode       String
-  status        VendorStatus @default(PENDING)
+  status        String       @default("PENDING")
   rating        Float        @default(0.0)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -120,7 +66,7 @@ model RFQ {
   category      String
   attachmentUrl String?
   deadline      DateTime
-  status        RFQStatus @default(DRAFT)
+  status        String    @default("DRAFT")
   createdById   String
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -158,7 +104,7 @@ model Quotation {
   deliveryTimeline String
   notes            String?
   attachmentUrl    String?
-  status           QuotationStatus @default(SUBMITTED)
+  status           String          @default("SUBMITTED")
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
@@ -177,7 +123,7 @@ model Approval {
   quotationId   String
   requestedById String
   approverId    String?
-  status        ApprovalStatus @default(PENDING)
+  status        String         @default("PENDING")
   remarks       String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -203,7 +149,7 @@ model PurchaseOrder {
   unitPrice     Float
   taxAmount     Float
   totalAmount   Float
-  status        PurchaseOrderStatus @default(GENERATED)
+  status        String              @default("GENERATED")
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
@@ -227,7 +173,7 @@ model Invoice {
   totalAmount   Float
   invoiceDate   DateTime      @default(now())
   dueDate       DateTime
-  status        InvoiceStatus @default(GENERATED)
+  status        String        @default("GENERATED")
   pdfUrl        String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
