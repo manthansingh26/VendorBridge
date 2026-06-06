@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { getInvoiceById, emailInvoice, updateInvoiceStatus, getInvoicePDFUrl } from "../../api/invoice.api";
+import { getInvoiceById, emailInvoice, updateInvoiceStatus, getInvoicePDF } from "../../api/invoice.api";
 import { useAuth } from "../../context/AuthContext";
 import { ROLES, STATUS_COLORS } from "../../utils/constants";
 import Card, { CardBody } from "../../components/ui/Card";
@@ -78,6 +78,23 @@ export default function InvoiceDetails() {
     }
   };
 
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setPdfLoading(true);
+    try {
+      const res = await getInvoicePDF(invoice.id);
+      const file = new Blob([res.data], { type: "application/pdf" });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL, "_blank");
+    } catch (err) {
+      console.error("Failed to download PDF:", err);
+      alert(err.response?.data?.message || "Failed to download PDF.");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
   const handleMarkPaid = async () => {
     try {
       const res = await updateInvoiceStatus(invoice.id, "PAID");
@@ -88,8 +105,6 @@ export default function InvoiceDetails() {
       console.error("Failed to mark invoice paid:", err);
     }
   };
-
-  const pdfUrl = getInvoicePDFUrl(invoice.id);
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -122,14 +137,15 @@ export default function InvoiceDetails() {
           </Button>
 
           {/* Download/View PDF */}
-          <a
-            href={pdfUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center justify-center rounded-lg text-sm font-medium transition-colors bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-3 py-2 h-9"
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={handleDownloadPDF}
+            isLoading={pdfLoading}
           >
-            <Download className="w-4 h-4 mr-1.5" /> View PDF
-          </a>
+            <Download className="w-4 h-4" /> View PDF
+          </Button>
 
           {/* Pay button */}
           {isManager && invoice.status !== "PAID" && invoice.status !== "CANCELLED" && (
