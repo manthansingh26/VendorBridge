@@ -28,9 +28,11 @@ const rfqCreateSchema = z.object({
     .string({ required_error: "Deadline date is required" })
     .refine((val) => {
       const date = new Date(val);
-      return !isNaN(date.getTime()) && date > new Date();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return !isNaN(date.getTime()) && date >= today;
     }, {
-      message: "Deadline must be a future date",
+      message: "Deadline must be today or a future date",
     }),
   attachmentUrl: z.string().optional().nullable(),
 });

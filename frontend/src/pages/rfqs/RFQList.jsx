@@ -125,7 +125,7 @@ export default function RFQList() {
         const newRFQ = res.data.data;
         // If publish and vendors selected, assign them which updates status to SENT
         if (shouldPublish && assignedVendorIds.length > 0) {
-          await assignVendors(newRFQ.id, { vendorIds: assignedVendorIds });
+          await assignVendors(newRFQ.id, assignedVendorIds);
         }
         setIsCreateOpen(false);
         setStep(1);

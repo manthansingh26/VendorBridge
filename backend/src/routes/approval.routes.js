@@ -9,7 +9,7 @@ const {
 const authMiddleware = require("../middleware/auth.middleware");
 const authorize = require("../middleware/role.middleware");
 
-const router = Router = express.Router();
+const router = express.Router();
 
 router.use(authMiddleware);
 

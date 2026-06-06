@@ -8,9 +8,11 @@ const invoiceCreateSchema = z.object({
     .string({ required_error: "Due date is required" })
     .refine((val) => {
       const date = new Date(val);
-      return !isNaN(date.getTime()) && date > new Date();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return !isNaN(date.getTime()) && date >= today;
     }, {
-      message: "Due date must be a future date",
+      message: "Due date must be today or a future date",
     }),
 });
 

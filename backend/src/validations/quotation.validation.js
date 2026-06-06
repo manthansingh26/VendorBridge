@@ -18,6 +18,7 @@ const quotationCreateSchema = z.object({
     .trim(),
   notes: z.string().optional().nullable(),
   attachmentUrl: z.string().optional().nullable(),
+  paymentTerms: z.number().int().positive().optional().nullable(),
 });
 
 const quotationUpdateSchema = quotationCreateSchema.partial();

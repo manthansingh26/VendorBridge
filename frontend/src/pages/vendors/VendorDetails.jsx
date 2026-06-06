@@ -5,7 +5,7 @@ import Card, { CardBody } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Table from "../../components/ui/Table";
 import { STATUS_COLORS } from "../../utils/constants";
-import { ArrowLeft, Star, Phone, Mail, MapPin, ShieldAlert, Award } from "lucide-react";
+import { ArrowLeft, Star, Phone, Mail, MapPin, ShieldAlert, Award, ClipboardList } from "lucide-react";
 
 export default function VendorDetails() {
   const { id } = useParams();

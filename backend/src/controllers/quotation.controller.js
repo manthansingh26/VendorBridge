@@ -69,6 +69,7 @@ const submitQuotation = async (req, res, next) => {
         notes: validated.notes || null,
         attachmentUrl: validated.attachmentUrl || null,
         status: "SUBMITTED",
+        paymentTerms: validated.paymentTerms || null,
       },
     });
 
@@ -228,6 +229,7 @@ const updateQuotation = async (req, res, next) => {
         deliveryTimeline: validated.deliveryTimeline !== undefined ? validated.deliveryTimeline : quotation.deliveryTimeline,
         notes: validated.notes !== undefined ? validated.notes : quotation.notes,
         attachmentUrl: validated.attachmentUrl !== undefined ? validated.attachmentUrl : quotation.attachmentUrl,
+        paymentTerms: validated.paymentTerms !== undefined ? validated.paymentTerms : quotation.paymentTerms,
       },
     });
 
