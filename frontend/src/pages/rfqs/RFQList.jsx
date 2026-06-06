@@ -106,9 +106,10 @@ export default function RFQList() {
   const onNextStep = async (data) => {
     setStep1Data(data);
     try {
-      const res = await getVendors({ category: data.category, status: "ACTIVE" });
+      const res = await getVendors({ category: data.category });
       if (res.data?.success) {
-        setMatchingVendors(res.data.data);
+        const filtered = res.data.data.filter(v => v.status === "ACTIVE" || v.status === "PENDING");
+        setMatchingVendors(filtered);
       }
       setStep(2);
     } catch (err) {
@@ -153,9 +154,10 @@ export default function RFQList() {
 
     try {
       // Get vendors matching this RFQ category
-      const res = await getVendors({ category: rfq.category, status: "ACTIVE" });
+      const res = await getVendors({ category: rfq.category });
       if (res.data?.success) {
-        setAllVendors(res.data.data);
+        const filtered = res.data.data.filter(v => v.status === "ACTIVE" || v.status === "PENDING");
+        setAllVendors(filtered);
         // Pre-fill already assigned
         const currentAssignedIds = rfq.assignedVendors?.map(av => av.vendorId) || [];
         setSelectedVendors(currentAssignedIds);

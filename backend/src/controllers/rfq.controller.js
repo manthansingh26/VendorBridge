@@ -247,7 +247,7 @@ const assignVendors = async (req, res, next) => {
     const vendors = await prisma.vendor.findMany({
       where: {
         id: { in: uniqueVendorIds },
-        status: "ACTIVE",
+        status: { in: ["ACTIVE", "PENDING"] },
       },
     });
 
