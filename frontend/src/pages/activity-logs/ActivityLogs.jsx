@@ -89,8 +89,8 @@ export default function ActivityLogs() {
                   {log.action}
                 </span>
               </td>
-              <td className="px-6 py-4 text-xs text-gray-600 max-w-xs truncate" title={log.details}>
-                {log.details}
+              <td className="px-6 py-4 text-xs text-gray-600 max-w-xs truncate" title={log.description}>
+                {log.description}
               </td>
               <td className="px-6 py-4 font-mono text-xs text-gray-400">
                 {log.ipAddress || "127.0.0.1"}

@@ -291,8 +291,8 @@ export default function ApprovalList() {
                   <div>
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-gray-800">Manager Authorization Decision</span>
-                      {selectedDetailApproval.decidedAt && (
-                        <span className="text-[10px] text-gray-400">{new Date(selectedDetailApproval.decidedAt).toLocaleDateString()}</span>
+                      {selectedDetailApproval.status !== "PENDING" && (
+                        <span className="text-[10px] text-gray-400">{new Date(selectedDetailApproval.updatedAt).toLocaleDateString()}</span>
                       )}
                     </div>
                     
@@ -315,9 +315,9 @@ export default function ApprovalList() {
                           </span>
                           <span className="text-gray-500 ml-2">by Manager</span>
                         </div>
-                        {selectedDetailApproval.decidedRemarks && (
+                        {selectedDetailApproval.remarks && (
                           <p className="p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-gray-600 italic">
-                            Decision Remarks: "{selectedDetailApproval.decidedRemarks}"
+                            Decision Remarks: "{selectedDetailApproval.remarks}"
                           </p>
                         )}
                       </div>
